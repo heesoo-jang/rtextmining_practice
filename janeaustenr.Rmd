@@ -1,0 +1,72 @@
+---
+title: "tidytext_janeausten"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#libraries
+library(janeaustenr)
+library(dplyr)
+library(stringr)
+```
+
+---
+
+```{r}
+#group by book type
+austen_by_book <- austen_books() %>% group_by(book)
+
+#detect chapter
+#str_detect(austen_by_book$text, regex("^chapter [\\divxlc]", ignore_case = TRUE)) 
+###regex means look for either a digit (\\d) or a character from i, v, x, l, or c.
+
+#add columns with row number and chapters using 
+austen_books <- austen_by_book %>% mutate(linenumber = row_number(), 
+                            chapter = cumsum(str_detect(text, 
+                                                        regex("^chapter [\\divxlc]",
+                                                              ignore_case = TRUE))))
+```
+
+
+#full code in block
+austen_books <- austen_books() %>%
+  group_by(book) %>% mutate(linenumber = row_number(), 
+                            chapter = cumsum(str_detect(text, 
+                                                        regex("^chapter [\\divxlc]",
+                                                              ignore_case = TRUE)))) %>% View()
+
+---
+
+```{r}
+#tokenization
+library(tidytext)
+
+tidy_books <- austen_books %>% unnest_tokens(word, text)
+```
+
+```{r}
+#removing stopwords with anti_join()
+data(stop_words)
+
+tidy_books <- tidy_books %>% anti_join(stop_words)
+
+#counting word frequencies
+tidy_books %>% count(word, sort = TRUE) 
+```
+
+```{r}
+#visualization
+library(ggplot2)
+
+tidy_books %>%
+  count(word, sort = TRUE) %>%
+  filter(n > 600) %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(n, word)) +
+  geom_col() +
+  labs(y = NULL)
+```
